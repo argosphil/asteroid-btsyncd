@@ -19,6 +19,7 @@
 #define SHELLSERVICE_H
 
 #include <QObject>
+#include <QProcess>
 
 #include "service.h"
 
@@ -31,6 +32,40 @@ public:
 
 public slots:
     void WriteValue(QByteArray, QVariantMap);
+};
+
+class ShellSendChrc : public Characteristic
+{
+    Q_OBJECT
+public:
+    ShellSendChrc(QDBusConnection bus, int index, Service *service)
+        : Characteristic(bus, index, SHELL_TERM_SEND_UUID, {"encrypt-authenticated-write"}, service), mService2(service) {}
+
+    Service *mService2;
+public slots:
+    void WriteValue(QByteArray, QVariantMap);
+};
+
+class ShellRecvChrc : public Characteristic
+{
+    Q_OBJECT
+    Q_PROPERTY(QByteArray Value READ getValue NOTIFY valueChanged)
+public:
+    ShellRecvChrc(QDBusConnection bus, int index, Service *service)
+        : Characteristic(bus, index, SHELL_TERM_RECV_UUID, {"encrypt-authenticated-read", "notify"}, service) {}
+
+    void receive(QByteArray ba);
+signals:
+    void valueChanged();
+public slots:
+    void emitPropertiesChanged();
+
+public:
+    QByteArray m_value;
+    QByteArray getValue()
+    {
+        return m_value;
+    }
 };
 
 
@@ -51,14 +86,14 @@ public slots:
     void StartNotify() {}
     void StopNotify() {}
 
-private slots:
+public slots:
     void emitPropertiesChanged();
     void onShellTaken(QString);
 
 signals:
     void valueChanged();
 
-private:
+public:
     QByteArray m_value;
 
     QByteArray getValue()
@@ -70,6 +105,13 @@ private:
 class ShellService : public Service
 {
     Q_OBJECT
+public:
+    ShellRecvChrc *mRecvChrc;
+    QProcess *mProcess = nullptr;
+    void send(QByteArray);
+public slots:
+    void onStandardOutput();
+    void onStandardError();
 public:
     explicit ShellService(int index, QDBusConnection bus, QObject *parent = 0);
 };

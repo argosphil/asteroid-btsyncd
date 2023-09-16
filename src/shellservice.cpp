@@ -27,41 +27,13 @@
 
 #include <unistd.h>
 
-void ShellReqChrc::WriteValue(QByteArray ba, QVariantMap vm)
-{
-  fprintf(stderr, "shellreqchrc::writevalue\n", ba, vm);
-  QString string(ba);
-  std::string stdstring = string.toStdString();
-  const char *cstr = stdstring.c_str();
-  system(cstr);
-    QList<QVariant> argumentList;
-    argumentList << "/tmp/btsyncd-shell.jpg";
-    //static QDBusInterface notifyApp(SHELL_SERVICE_NAME, SHELL_PATH_BASE, SHELL_MAIN_IFACE, QDBusConnection::systemBus());
-    //QDBusMessage reply = notifyApp.callWithArgumentList(QDBus::AutoDetect, "saveShell", argumentList);
-    //if(reply.type() == QDBusMessage::ErrorMessage)
-    //  fprintf(stderr, "ShellReqChrc::WriteValue: D-Bus Error: %s\n", reply.errorMessage().toStdString().c_str());
-    //emit shellTaken("/tmp/btsyncd-shell.jpg");
-}
-
 void ShellSendChrc::WriteValue(QByteArray ba, QVariantMap vm)
 {
-    fprintf(stderr, "shellsendchrc::writevalue\n", ba, vm);
     if (mService2) {
 	ShellService *shellService = (ShellService *) mService2;
 	shellService->send(ba);
+	shellService->receive(ba);
     }
-    return;
-    QString string(ba);
-    std::string stdstring = string.toStdString();
-    const char *cstr = stdstring.c_str();
-    system(cstr);
-    QList<QVariant> argumentList;
-    argumentList << "/tmp/btsyncd-shell.jpg";
-    //static QDBusInterface notifyApp(SHELL_SERVICE_NAME, SHELL_PATH_BASE, SHELL_MAIN_IFACE, QDBusConnection::systemBus());
-    //QDBusMessage reply = notifyApp.callWithArgumentList(QDBus::AutoDetect, "saveShell", argumentList);
-    //if(reply.type() == QDBusMessage::ErrorMessage)
-    //  fprintf(stderr, "ShellReqChrc::WriteValue: D-Bus Error: %s\n", reply.errorMessage().toStdString().c_str());
-    //emit shellTaken("/tmp/btsyncd-shell.jpg");
 }
 
 void ShellResponseChrc::emitPropertiesChanged()
@@ -98,7 +70,6 @@ void ShellRecvChrc::emitPropertiesChanged()
 
     if (!connection.send(message))
         qDebug() << "Failed to send DBus property notification signal";
-    fprintf(stderr, "sent via dbus!\n!)");
 }
 
 void ShellRecvChrc::receive(QByteArray ba)
@@ -108,7 +79,6 @@ void ShellRecvChrc::receive(QByteArray ba)
 	receive(ba.mid(200, -1));
 	return;
     }
-    fprintf(stderr, "received! %ld bytes\n", (long) ba.size());
     m_value = ba;
     emit valueChanged();
     emitPropertiesChanged();
@@ -159,13 +129,9 @@ void ShellService::send(QByteArray ba)
 
 ShellService::ShellService(int index, QDBusConnection bus, QObject *parent) : Service(bus, index, SHELL_UUID, parent)
 {
-    ShellReqChrc *reqChrc = new ShellReqChrc(bus, 0, this);
-    //ShellResponseChrc *respChrc = new ShellResponseChrc(bus, 1, this);
-    ShellSendChrc *sendChrc = new ShellSendChrc(bus, 1, this);
-    ShellRecvChrc *recvChrc = new ShellRecvChrc(bus, 2, this);
+    ShellSendChrc *sendChrc = new ShellSendChrc(bus, 0, this);
+    ShellRecvChrc *recvChrc = new ShellRecvChrc(bus, 1, this);
 
-    addCharacteristic(reqChrc);
-    //addCharacteristic(respChrc);
     addCharacteristic(sendChrc);
     addCharacteristic(recvChrc);
     mRecvChrc = recvChrc;
